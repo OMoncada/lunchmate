@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "J7W0o8QnvOo=",
+  "success": true,
+  "projectFilePath": "D:\\Pathway\\CSE325\\project\\CSE325-visioncoders\\CSE325-visioncoders.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\andyg\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.0\\microsoft.aspnetcore.app.internal.assets.10.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
