@@ -3,12 +3,16 @@ using CSE325_visioncoders.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+
 // Register the MealService here
-builder.Services.AddSingleton<MealService>(); 
+builder.Services.AddSingleton<MealService>();
+
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
 

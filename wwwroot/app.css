@@ -74,6 +74,22 @@ h1:focus {
     text-align: start;
 }
 
+.titleBar {
+    background-color: #133956;
+    border-radius: 8px;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+    font-size: 1.5rem;
+}
+
+.titleIcon {
+    width: 2rem;
+    margin-left: 0.5rem;
+    margin-right: 0.7rem;
+}
+
 /* ===================== */
 /*   Meals page styles   */
 /* ===================== */
