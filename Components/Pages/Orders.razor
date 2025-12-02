@@ -1,24 +1,37 @@
 @page "/orders"
+@using System
+@using System.Collections.Generic
 @using System.Linq
 @using CSE325_visioncoders.Models
 @using CSE325_visioncoders.Services
-@inject IOrderService DataService
+@inject IOrderService OrderService
+@inject IOrderSettingsService SettingsService
 
 <div class="titleBar">
     <img class="titleIcon" src="img/orderIcon.svg" alt="order icon">
     <a>Orders</a>
 </div>
 
-@if (orders is null)
+<div style="margin:12px 0;">
+    <label>Day start:</label> @settings.DayStart
+        <span style="margin-left:12px;"></span>
+    <label>Cut:</label> @settings.NoonSwitch
+    <span style="margin-left:12px;"></span>
+        <label>Time Zone:</label> @settings.TimeZoneId
+    <button class="btn" style="margin-left:12px;" @onclick="LoadByRule">Refresh</button>
+</div>
+
+@if (loading)
 {
     <p>Loading...</p>
 }
-else if (orders.Count == 0)
+else if (orders is null || orders.Count == 0)
 {
-    <p>No data</p>
+    <p>No data @windowLabel</p>
 }
 else
 {
+    <h4>@windowLabel</h4>
     <table class="table">
         <thead>
             <tr>
@@ -29,24 +42,70 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var o in orders)
-            {
-                <tr>
-                    <td>@o.OrderDate.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td>@o.Email</td>
-                    <td>@o.Quantity</td>
-                    <td>@string.Join(", ", (o.Specials ?? new()).Select(kv => $"{kv.Keys.First()}={kv.Values.First()}"))</td>
-                </tr>
-            }
+        @foreach (var o in orders)
+        {
+            <tr>
+                <td>@o.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@o.Email</td>
+                <td>@o.Quantity</td>
+                <td>@string.Join(", ",
+                (o.Specials ?? new()).SelectMany(d => d.Select(kv => $"{kv.Key}={kv.Value}")))</td>
+            </tr>
+        }
         </tbody>
     </table>
 }
 
 @code {
-    private List<Order>? orders;
+    private List<Order> orders = new();
+    private OrderViewSettings settings = new();
+    private bool loading;
+    private string windowLabel = "";
 
     protected override async Task OnInitializedAsync()
     {
-        orders = await DataService.GetAsync();
+        settings = await SettingsService.GetAsync();
+        await LoadByRule();
+    }
+
+    private async Task LoadByRule()
+    {
+        loading = true;
+        try
+        {
+
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(settings.TimeZoneId);
+            var nowLocal = TimeZoneInfo.ConvertTime(DateTime.UtcNow, tz);
+
+            var dayStart = settings.DayStart;
+            var noon = settings.NoonSwitch;
+
+            DateTime localStart, localEnd;
+            DateOnly today = DateOnly.FromDateTime(nowLocal);
+            DateOnly yesterday = today.AddDays(-1);
+            DateOnly tomorrow = today.AddDays(1);
+
+            if (nowLocal.TimeOfDay < noon.ToTimeSpan())
+            {
+                localStart = yesterday.ToDateTime(dayStart);
+                localEnd = today.ToDateTime(dayStart);
+                windowLabel = $"{yesterday:yyyy-MM-dd} {dayStart} → {today:yyyy-MM-dd} {dayStart}";
+            }
+            else
+            {
+                // 12:00 o después -> [hoy 08:00, mañana 08:00)
+                localStart = today.ToDateTime(dayStart);
+                localEnd = tomorrow.ToDateTime(dayStart);
+                windowLabel = $"{today:yyyy-MM-dd} {dayStart} → {tomorrow:yyyy-MM-dd} {dayStart}";
+            }
+
+            orders = await OrderService.GetByLocalWindowAsync(localStart, localEnd, settings.TimeZoneId);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
     }
 }
+

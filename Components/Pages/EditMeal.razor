@@ -7,7 +7,10 @@
 @inject IWebHostEnvironment Env
 @inject NavigationManager Nav
 
-<h3 class="meals-title">Edit Meal</h3>
+<div class="titleBar">
+    <img class="titleIcon" src="img/mealIcon.svg" alt="inventorymeal icon">
+    <a>Edit Meals</a>
+</div>
 
 @if (meal is null)
 {

@@ -13,6 +13,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<MealService>();
 
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddSingleton<IOrderSettingsService, OrderSettingsService>();
 
 var app = builder.Build();
 

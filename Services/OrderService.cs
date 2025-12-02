@@ -1,30 +1,63 @@
 namespace CSE325_visioncoders.Services;
 
+using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting;
 using CSE325_visioncoders.Models;
+using MongoDB.Driver;
 
 public interface IOrderService
 {
     Task<List<Order>> GetAsync();
+    Task<Order?> GetByIdAsync(string id);
+    Task CreateAsync(Order order);
+    Task UpdateAsync(Order order);
+    Task DeleteAsync(string id);
+
+    Task<List<Order>> GetByLocalWindowAsync(DateTime localStart, DateTime localEnd, string timeZoneId);
 }
 
 public class OrderService : IOrderService
 {
-    private readonly IWebHostEnvironment _env;
-    public OrderService(IWebHostEnvironment env) => _env = env;
+    private readonly IMongoCollection<Order> _orders;
 
-    public async Task<List<Order>> GetAsync()
+    public OrderService(IConfiguration configuration)
     {
-        // Ajusta la ruta al archivo según dónde lo colocaste.
-        // Recomendado: wwwroot/data/orderData.json
-        var path = "wwwroot/data/orderData.json";
-        using var fs = File.OpenRead(path);
-        var data = await JsonSerializer.DeserializeAsync<List<Order>>(fs,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        return data ?? new List<Order>();
+        var connectionString = configuration.GetConnectionString("MongoDb");
+        var client = new MongoClient(connectionString);
+        var database = client.GetDatabase("lunchmate");  // ajusta si tu DB tiene otro nombre
+        _orders = database.GetCollection<Order>("orders"); // ajusta si la colección se llama distinto
+    }
+
+    public async Task<List<Order>> GetAsync() =>
+        await _orders.Find(_ => true)
+                     .SortByDescending(o => o.OrderDate)
+                     .ToListAsync();
+
+    public async Task<Order?> GetByIdAsync(string id) =>
+        await _orders.Find(o => o.Id == id).FirstOrDefaultAsync();
+
+    public async Task CreateAsync(Order order) =>
+        await _orders.InsertOneAsync(order);
+
+    public async Task UpdateAsync(Order order) =>
+        await _orders.ReplaceOneAsync(o => o.Id == order.Id, order);
+
+    public async Task DeleteAsync(string id) =>
+        await _orders.DeleteOneAsync(o => o.Id == id);
+
+    // IMPLEMENTACIÓN que coincide con la interfaz
+    public async Task<List<Order>> GetByLocalWindowAsync(DateTime localStart, DateTime localEnd, string timeZoneId)
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tz);
+        var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tz);
+
+        var filter = Builders<Order>.Filter.Gte(o => o.OrderDate, startUtc)
+                   & Builders<Order>.Filter.Lt(o => o.OrderDate, endUtc);
+
+        return await _orders.Find(filter)
+                            .SortBy(o => o.OrderDate)
+                            .ToListAsync();
     }
 }
