@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Http;
+using MongoDB.Driver;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -30,8 +34,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<MealService>();
 builder.Services.AddSingleton<CalendarService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddSingleton<IOrderSettingsService, OrderSettingsService>(); 
-
+builder.Services.AddSingleton<IOrderSettingsService, OrderSettingsService>();
+builder.Services.AddSingleton<CSE325_visioncoders.Services.ReviewService>();
 // MongoDB settings + UserService for auth
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
@@ -61,6 +65,79 @@ app.UseAuthorization();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+
+app.MapPost("/dev/seed", async (ILogger<Program> logger, IServiceProvider sp, IWebHostEnvironment env) =>
+{
+    logger.LogInformation(">> /dev/seed: inicio");
+
+    try
+    {
+        // 1) Intentar obtener IMongoDatabase desde DI (si ya lo registraste en Program.cs/Startup)
+        var db = sp.GetService<IMongoDatabase>();
+        if (db == null)
+        {
+            // 2) Intentar vía IOptions<MongoDbSettings>
+            var opt = sp.GetService<IOptions<MongoDbSettings>>();
+            if (opt != null &&
+                !string.IsNullOrWhiteSpace(opt.Value.ConnectionString) &&
+                !string.IsNullOrWhiteSpace(opt.Value.DatabaseName))
+            {
+                var client = new MongoClient(opt.Value.ConnectionString);
+                db = client.GetDatabase(opt.Value.DatabaseName);
+                logger.LogInformation("IMongoDatabase obtenido desde IOptions<MongoDbSettings>.");
+            }
+            else
+            {
+                // 3) Fallback: IConfiguration directo (appsettings/connectionStrings)
+                var cfg = sp.GetRequiredService<IConfiguration>();
+
+                var conn =
+                    cfg["MongoDbSettings:ConnectionString"] ??
+                    cfg["MongoDB:ConnectionString"] ??
+                    cfg.GetConnectionString("MongoDb") ??
+                    cfg.GetConnectionString("MongoDB");
+
+                var dbName =
+                    cfg["MongoDbSettings:DatabaseName"] ??
+                    cfg["MongoDB:DatabaseName"];
+
+                if (string.IsNullOrWhiteSpace(conn))
+                    throw new InvalidOperationException("No se encontró la cadena de conexión de MongoDB en configuración.");
+
+                // Intentar obtener DatabaseName desde la propia cadena si no vino en config
+                if (string.IsNullOrWhiteSpace(dbName))
+                {
+                    var url = new MongoUrl(conn);
+                    dbName = url.DatabaseName;
+                }
+
+                if (string.IsNullOrWhiteSpace(dbName))
+                    throw new InvalidOperationException("No se pudo determinar el nombre de la base de datos de MongoDB (DatabaseName).");
+
+                var client = new MongoClient(conn);
+                db = client.GetDatabase(dbName);
+                logger.LogInformation("IMongoDatabase obtenido desde IConfiguration. DB: {DbName}", dbName);
+            }
+        }
+
+        // 4) Ejecutar seed preservando datos
+        await DevSeederPreserve.RunAsync(db, preserve: true);
+
+        logger.LogInformation("<< /dev/seed: ok");
+        return Results.Ok(new { ok = true, mode = "preserve" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error en /dev/seed");
+        var detail = env.IsDevelopment() ? ex.ToString() : ex.Message;
+        return Results.Problem(title: "Dev seed failed", detail: detail, statusCode: StatusCodes.Status500InternalServerError);
+    }
+})
+.AllowAnonymous()
+.WithName("DevSeed")
+.Produces(StatusCodes.Status200OK)
+.ProducesProblem(StatusCodes.Status500InternalServerError);
 
 // ---------- AUTH APIs ----------
 
