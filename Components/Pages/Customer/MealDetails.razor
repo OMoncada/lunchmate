@@ -1,21 +1,18 @@
-@page "/meals/details/{Id}"
+@page "/customer/meals/details/{Id}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "customer")]
 @rendermode InteractiveServer
 @using CSE325_visioncoders.Models
 @using CSE325_visioncoders.Services
 @inject MealService _mealService
 @inject NavigationManager Nav
-@inject AuthService Auth
+@layout MainLayout
 
 <div class="titleBar">
     <img class="titleIcon" src="img/mealIcon.svg" alt="meal icon">
     <a>Meal Details</a>
 </div>
 
-@if (!Auth.IsLoggedIn)
-{
-    <p>You must be logged in to view this page. Redirecting to login...</p>
-}
-else if (meal is null)
+@if (meal is null)
 {
     <p>Loading meal information...</p>
 }
@@ -43,42 +40,23 @@ else
             <p>@meal.Ingredients</p>
         </div>
 
-        <div class="meal-details-section">
-            <h4>Rating / Comments</h4>
-            <p><i>(Read-only – will come from customer reviews later.)</i></p>
-        </div>
-
-        <button class="btn btn-secondary mt-3" @onclick="GoBack">
-            Back to Meals
-        </button>
+        <button class="btn btn-secondary mt-3" @onclick="GoBack">Back to Meals</button>
     </div>
 }
 
 @code {
     [Parameter] public string Id { get; set; } = default!;
-
     private Meal? meal;
 
     protected override async Task OnInitializedAsync()
     {
-        if (!Auth.IsLoggedIn)
-        {
-            Nav.NavigateTo("/login");
-            return;
-        }
-
         meal = await _mealService.GetByIdAsync(Id);
         if (meal is null)
         {
-            Nav.NavigateTo("/meals");
+            Nav.NavigateTo("/customer/meals");
         }
     }
 
-    private void GoBack()
-    {
-        Nav.NavigateTo("/meals");
-    }
-
-    private string GetImage(string? url)
-        => string.IsNullOrWhiteSpace(url) ? "img/placeholder-meal.png" : url;
+    private void GoBack() => Nav.NavigateTo("/customer/meals");
+    private string GetImage(string? url) => string.IsNullOrWhiteSpace(url) ? "img/placeholder-meal.png" : url;
 }

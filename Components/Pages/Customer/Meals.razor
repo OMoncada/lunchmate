@@ -1,0 +1,22 @@
+@page "/customer/meals"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "customer")]
+@rendermode InteractiveServer
+@using CSE325_visioncoders.Models
+@using CSE325_visioncoders.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject MealService _mealService
+@inject IWebHostEnvironment Env
+@inject NavigationManager Nav
+@inject AuthService Auth
+@layout MainLayout
+
+<div class="titleBar">
+    <img class="titleIcon" src="img/mealIcon.svg" alt="meal icon">
+    <a>Meals</a>
+</div>
+
+<h3>Weekly Menu</h3>
+
+@code {
+
+}
