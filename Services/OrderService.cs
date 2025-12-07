@@ -25,8 +25,8 @@ public class OrderService : IOrderService
     {
         var connectionString = configuration.GetConnectionString("MongoDb");
         var client = new MongoClient(connectionString);
-        var database = client.GetDatabase("lunchmate");  // ajusta si tu DB tiene otro nombre
-        _orders = database.GetCollection<Order>("orders"); // ajusta si la colección se llama distinto
+        var database = client.GetDatabase("lunchmate");  
+        _orders = database.GetCollection<Order>("orders"); 
     }
 
     public async Task<List<Order>> GetAsync() =>
@@ -46,7 +46,7 @@ public class OrderService : IOrderService
     public async Task DeleteAsync(string id) =>
         await _orders.DeleteOneAsync(o => o.Id == id);
 
-    // IMPLEMENTACIÓN que coincide con la interfaz
+    
     public async Task<List<Order>> GetByLocalWindowAsync(DateTime localStart, DateTime localEnd, string timeZoneId)
     {
         var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
