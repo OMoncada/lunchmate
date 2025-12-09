@@ -12,13 +12,19 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject MenuDayService MenuDayService
 
+<div class="titleBar">
+    <img class="titleIcon" src="img/calendarIcon.svg" alt="calendar icon">
+    <a>Calendar</a>
+</div>
+
+
 <!-- ALERTS -->
 @if (!string.IsNullOrEmpty(todayAlert) || !string.IsNullOrEmpty(tomorrowAlert))
 {
     <div class="mb-3">
         @if (!string.IsNullOrEmpty(todayAlert))
         {
-            <div class="alert alert-info">
+            <div class="alert alert-info" style="margin-top: 1rem;">
                 @todayAlert
             </div>
         }
