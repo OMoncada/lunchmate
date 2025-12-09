@@ -30,8 +30,8 @@ public class OrderService : IOrderService
         var client = new MongoClient(connectionString);
         var database = client.GetDatabase("lunchmate");  
         _orders = database.GetCollection<Order>("orders"); 
-        var database = client.GetDatabase("lunchmate"); 
-        _orders = database.GetCollection<Order>("orders");
+        // var database = client.GetDatabase("lunchmate"); 
+        // _orders = database.GetCollection<Order>("orders");
     }
 
     public async Task<List<Order>> GetAsync() =>
